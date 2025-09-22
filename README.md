@@ -23,7 +23,7 @@ version: '3.8'
 
 services:
   homepage-editor:
-    image: your-registry/homepage-editor:latest
+    image: ghcr.io/leibo-d/homepage-editor:latest
     container_name: homepage-editor
     ports:
       - "8080:8080"
@@ -63,14 +63,14 @@ docker run -d \
   -v $(pwd)/backups:/data/backups \
   --user 1000:1000 \
   --restart unless-stopped \
-  your-registry/homepage-editor:latest
+  ghcr.io/leibo-d/homepage-editor:latest
 ```
 
 ### Option 3: Build from Source
 
 1. **Clone the repository:**
 ```bash
-git clone https://github.com/your-username/homepage-editor.git
+git clone https://github.com/leibo-d/homepage-editor.git
 cd homepage-editor
 ```
 
@@ -139,7 +139,7 @@ services:
     # ... your existing homepage config ...
     
   homepage-editor:
-    image: your-registry/homepage-editor:latest
+    image: ghcr.io/leibo-d/homepage-editor:latest
     ports:
       - "8080:8080"
     volumes:
@@ -154,7 +154,7 @@ services:
 ### Building Locally
 
 ```bash
-git clone https://github.com/your-username/homepage-editor.git
+git clone https://github.com/leibo-d/homepage-editor.git
 cd homepage-editor
 docker build -t homepage-editor:local .
 ```
@@ -246,7 +246,7 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/your-username/homepage-editor/issues)
+- **Issues**: [GitHub Issues](https://github.com/leibo-d/homepage-editor/issues)
 - **Documentation**: [Homepage Docs](https://gethomepage.dev/en/configs/services/)
 - **Docker Hub**: [your-registry/homepage-editor](https://hub.docker.com/r/your-registry/homepage-editor)
 
