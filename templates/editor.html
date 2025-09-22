@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAML Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background-color: #2d2d30;
+            border-bottom: 1px solid #464647;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            position: relative;
+            overflow: visible;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .history-btn-container {
+            position: absolute;
+            left: 75%;
+            transform: translateX(-50%);
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background-color: #0e639c;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #1177bb;
+        }
+
+        .btn-secondary {
+            background-color: #5a5a5a;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #6e6e6e;
+        }
+
+        .btn-success {
+            background-color: #107c10;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background-color: #0f7b0f;
+        }
+
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 36px;
+        }
+
+        .status.valid {
+            background-color: #107c10;
+            color: white;
+        }
+
+        .status.invalid {
+            background-color: #d13438;
+            color: white;
+        }
+
+        /* Message positioned with center at 50% mark */
+        .message-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            pointer-events: none;
+            max-width: calc(50% - 40px);
+        }
+
+        .message {
+            background-color: #107c10;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            pointer-events: all;
+            word-wrap: break-word;
+            display: inline-block;
+            width: auto;
+        }
+
+        .message.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .message.success {
+            background-color: #107c10;
+        }
+
+        .message.error {
+            background-color: #d13438;
+        }
+
+        .message.info {
+            background-color: #0078d4;
+        }
+
+        /* History dropdown positioned at 75% */
+        .history-container {
+            position: absolute;
+            top: 100%;
+            left: 75%;
+            transform: translateX(-50%);
+            z-index: 200;
+        }
+
+        .history-dropdown {
+            background-color: #2d2d30;
+            border: 1px solid #464647;
+            border-radius: 4px;
+            width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .history-dropdown.show {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .history-header {
+            background-color: #3c3c3c;
+            padding: 10px 12px;
+            border-bottom: 1px solid #464647;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cccccc;
+        }
+
+        .history-item {
+            padding: 10px 12px;
+            font-size: 13px;
+            border-bottom: 1px solid #464647;
+            color: white;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item.success {
+            background-color: #107c10;
+        }
+
+        .history-item.error {
+            background-color: #d13438;
+        }
+
+        .history-item.info {
+            background-color: #0078d4;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor {
+            flex: 1;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            border: none;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: #252526;
+            border-left: 1px solid #464647;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar h3 {
+            padding: 15px 20px 10px;
+            margin: 0;
+            font-size: 14px;
+            color: #cccccc;
+            border-bottom: 1px solid #464647;
+        }
+
+        .backup-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .backup-item {
+            background-color: #2d2d30;
+            border: 1px solid #464647;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .backup-item:hover {
+            background-color: #37373d;
+            border-color: #6fc3df;
+        }
+
+        .backup-name {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #6fc3df;
+            margin-bottom: 4px;
+        }
+
+        .backup-details {
+            font-size: 11px;
+            color: #cccccc;
+        }
+
+        .error-details {
+            margin: 10px 20px;
+            padding: 10px;
+            background-color: #2d2d30;
+            border-left: 3px solid #d13438;
+            border-radius: 0 4px 4px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #ff6b6b;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                grid-template-columns: 1fr;
+                height: auto;
+                padding: 10px;
+            }
+
+            .center-section {
+                flex-wrap: wrap;
+            }
+
+            .message-container {
+                position: static;
+                transform: none;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="controls">
+            <span id="status" class="status valid">Valid YAML</span>
+            <button id="validateBtn" class="btn btn-secondary">Validate</button>
+            <button id="reloadBtn" class="btn btn-secondary">Reload</button>
+            <button id="saveBtn" class="btn btn-primary">Save</button>
+        </div>
+        
+        <div class="history-btn-container">
+            <button id="historyBtn" class="btn btn-secondary">History</button>
+        </div>
+
+        <!-- Message appears from 50% to right edge -->
+        <div class="message-container">
+            <div id="message" class="message"></div>
+        </div>
+
+        <!-- History dropdown appears centered at 75% -->
+        <div class="history-container">
+            <div id="historyDropdown" class="history-dropdown">
+                <div class="history-header">Message History</div>
+                <div id="historyContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="editor-container">
+            <textarea id="editor" class="editor" placeholder="Enter your YAML content here...">{{ content }}</textarea>
+            <div id="errorDetails" class="error-details"></div>
+        </div>
+        
+        <div class="sidebar">
+            <h3>Backups</h3>
+            <div id="backupList" class="backup-list">
+                Loading backups...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var isModified = false;
+        var messageTimeout = null;
+        var messageHistory = [];
+        var historyVisible = false;
+
+        window.onload = function() {
+            initializeEditor();
+        };
+
+        function initializeEditor() {
+            var editor = document.getElementById('editor');
+            var saveBtn = document.getElementById('saveBtn');
+            var validateBtn = document.getElementById('validateBtn');
+            var reloadBtn = document.getElementById('reloadBtn');
+            var historyBtn = document.getElementById('historyBtn');
+
+            editor.oninput = function() {
+                isModified = true;
+                updateSaveButton();
+                validateContent();
+            };
+
+            saveBtn.onclick = function(e) {
+                e.stopPropagation();
+                saveFile();
+            };
+            
+            validateBtn.onclick = function(e) {
+                e.stopPropagation();
+                validateContent();
+                showMessage('YAML validation completed', 'info');
+            };
+            
+            reloadBtn.onclick = function(e) {
+                e.stopPropagation();
+                reloadFile();
+            };
+            
+            historyBtn.onclick = function(e) {
+                e.stopPropagation();
+                toggleHistory();
+            };
+
+            document.onkeydown = function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                    e.preventDefault();
+                    saveFile();
+                }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                    e.preventDefault();
+                    reloadFile();
+                }
+            };
+
+            // Close history when clicking outside
+            document.onclick = function(e) {
+                var historyBtn = document.getElementById('historyBtn');
+                var historyDropdown = document.getElementById('historyDropdown');
+                
+                if (!historyBtn.contains(e.target) && 
+                    !historyDropdown.contains(e.target) && 
+                    historyVisible) {
+                    toggleHistory();
+                }
+            };
+
+            validateContent();
+            loadBackups();
+            updateSaveButton();
+        }
+
+        function updateSaveButton() {
+            var saveBtn = document.getElementById('saveBtn');
+            if (saveBtn.disabled) return;
+            
+            saveBtn.textContent = isModified ? 'Save *' : 'Save';
+            saveBtn.className = isModified ? 'btn btn-success' : 'btn btn-primary';
+        }
+
+        function addToHistory(text, type) {
+            var timestamp = new Date().toLocaleTimeString();
+            messageHistory.unshift({ text: text, type: type, timestamp: timestamp });
+            
+            if (messageHistory.length > 15) {
+                messageHistory.pop();
+            }
+        }
+
+        function showMessage(text, type) {
+            var messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = 'message ' + type + ' show';
+            
+            addToHistory(text, type);
+            
+            if (messageTimeout) {
+                clearTimeout(messageTimeout);
+            }
+            
+            messageTimeout = setTimeout(function() {
+                messageEl.classList.remove('show');
+            }, 4000);
+        }
+
+        function toggleHistory() {
+            var historyDropdown = document.getElementById('historyDropdown');
+            var historyContent = document.getElementById('historyContent');
+            
+            historyVisible = !historyVisible;
+            
+            if (historyVisible) {
+                var html = '';
+                for (var i = 0; i < messageHistory.length; i++) {
+                    var msg = messageHistory[i];
+                    html += '<div class="history-item ' + msg.type + '">' + msg.text + '</div>';
+                }
+                
+                if (messageHistory.length === 0) {
+                    html = '<div class="history-item">No messages yet</div>';
+                }
+                
+                historyContent.innerHTML = html;
+                historyDropdown.classList.add('show');
+            } else {
+                historyDropdown.classList.remove('show');
+            }
+        }
+
+        function updateStatus(valid, error) {
+            var status = document.getElementById('status');
+            var errorDetails = document.getElementById('errorDetails');
+            
+            if (valid) {
+                status.textContent = 'Valid YAML';
+                status.className = 'status valid';
+                errorDetails.style.display = 'none';
+            } else {
+                status.textContent = 'Invalid YAML';
+                status.className = 'status invalid';
+                if (error) {
+                    errorDetails.textContent = error;
+                    errorDetails.style.display = 'block';
+                }
+            }
+        }
+
+        function validateContent() {
+            var editor = document.getElementById('editor');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/validate', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var result = JSON.parse(xhr.responseText);
+                    updateStatus(result.valid, result.error);
+                }
+            };
+            xhr.send(JSON.stringify({ content: editor.value }));
+        }
+
+        function saveFile() {
+            var editor = document.getElementById('editor');
+            var saveBtn = document.getElementById('saveBtn');
+            
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/save', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    saveBtn.disabled = false;
+                    updateSaveButton();
+                    
+                    if (xhr.status === 200) {
+                        var result = JSON.parse(xhr.responseText);
+                        if (result.success) {
+                            isModified = false;
+                            updateSaveButton();
+                            var messageType = result.no_changes ? 'info' : 'success';
+                            showMessage(result.message, messageType);
+                            if (!result.no_changes) {
+                                loadBackups();
+                            }
+                        } else {
+                            showMessage(result.error, 'error');
+                        }
+                    } else {
+                        showMessage('Network error while saving', 'error');
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ content: editor.value }));
+        }
+
+        function reloadFile() {
+            if (isModified && !confirm('You have unsaved changes. Are you sure you want to reload?')) {
+                return;
+            }
+
+            var editor = document.getElementById('editor');
+            var reloadBtn = document.getElementById('reloadBtn');
+            
+            reloadBtn.disabled = true;
+            reloadBtn.textContent = 'Reloading...';
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/reload', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    reloadBtn.disabled = false;
+                    reloadBtn.textContent = 'Reload';
+                    
+                    if (xhr.status === 200) {
+                        var result = JSON.parse(xhr.responseText);
+                        editor.value = result.content;
+                        isModified = false;
+                        updateSaveButton();
+                        validateContent();
+                        showMessage('File reloaded successfully', 'success');
+                    } else {
+                        showMessage('Error reloading file', 'error');
+                    }
+                }
+            };
+            xhr.send();
+        }
+
+        function loadBackups() {
+            var backupList = document.getElementById('backupList');
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/backups', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var result = JSON.parse(xhr.responseText);
+                    if (result.error) {
+                        backupList.innerHTML = '<div style="color: #ff6b6b; padding: 10px;">Error loading backups</div>';
+                        return;
+                    }
+
+                    if (!result.backups || result.backups.length === 0) {
+                        backupList.innerHTML = '<div style="color: #cccccc; padding: 10px;">No backups available</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    for (var i = 0; i < result.backups.length; i++) {
+                        var backup = result.backups[i];
+                        html += '<div class="backup-item" onclick="restoreBackup(\'' + backup.filename + '\')">';
+                        html += '<div class="backup-name">' + backup.filename + '</div>';
+                        html += '<div class="backup-details">' + backup.modified + ' • ' + backup.size + ' bytes</div>';
+                        html += '</div>';
+                    }
+                    backupList.innerHTML = html;
+                }
+            };
+            xhr.send();
+        }
+
+        function restoreBackup(filename) {
+            if (isModified && !confirm('You have unsaved changes. Are you sure you want to restore from backup?')) {
+                return;
+            }
+
+            var editor = document.getElementById('editor');
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/restore/' + encodeURIComponent(filename), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var result = JSON.parse(xhr.responseText);
+                    if (result.success) {
+                        editor.value = result.content;
+                        isModified = false;
+                        updateSaveButton();
+                        validateContent();
+                        showMessage(result.message, 'success');
+                        loadBackups();
+                    } else {
+                        showMessage(result.error, 'error');
+                    }
+                }
+            };
+            xhr.send();
+        }
+    </script>
+</body>
+</html>

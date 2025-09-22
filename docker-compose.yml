@@ -1,0 +1,28 @@
+services:
+  homepage-editor:
+    build: .
+    container_name: homepage-editor
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount your Homepage services.yaml file and backup directory
+      # Adjust these paths to match your Homepage setup
+      - ./services.yaml:/data/services.yaml
+      - ./backups:/data/backups
+    environment:
+      - YAML_FILE_PATH=/data/services.yaml
+      - BACKUP_DIR=/data/backups
+      - PORT=8080
+      - HOST=0.0.0.0
+      - FLASK_ENV=production
+    user: "1000:1000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health').read()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "com.docker.compose.project=homepage-editor"
+      - "description=YAML Editor for Homepage Services"
